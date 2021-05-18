@@ -4,7 +4,7 @@ let db;
 let budgetVersion;
 
 // Create a new db request for a "budget" database.
-const request = window.indexedDB.open("BudgetDB", budgetVersion || 21);
+const request = window.indexedDB.open("BudgetStore", budgetVersion || 21);
 
 request.onupgradeneeded = function (e) {
   console.log('Upgrade needed in IndexDB');
@@ -21,8 +21,9 @@ request.onupgradeneeded = function (e) {
   }
 };
 
-request.onsuccess = event => {
+request.onsuccess = e => {
   console.log(request.result);
+  db=e.target.result;
 };
 
 fetch("/api/transaction")
@@ -136,42 +137,53 @@ function sendTransaction(isAdding) {
   populateTable();
   populateTotal();
   
-  // also send to server
-  fetch("/api/transaction", {
-    method: "POST",
-    body: JSON.stringify(transaction),
-    headers: {
-      Accept: "application/json, text/plain, */*",
-      "Content-Type": "application/json"
-    }
-  })
-  .then(response => {    
-    return response.json();
-  })
-  .then(data => {
-    if (data.errors) {
-      errorEl.textContent = "Missing Information";
-    }
-    else {
-      // clear form
-      nameEl.value = "";
-      amountEl.value = "";
-    }
-  })
-  .catch(err => {
-    // fetch failed, so save in indexed db
-    saveRecord(transaction);
+  saveRecord(transaction);
 
-    // clear form
-    nameEl.value = "";
-    amountEl.value = "";
-  });
+  // also send to server
+  // fetch("/api/transaction", {
+  //   method: "POST",
+  //   body: JSON.stringify(transaction),
+  //   headers: {
+  //     Accept: "application/json, text/plain, */*",
+  //     "Content-Type": "application/json"
+  //   }
+  // })
+  // .then(response => {    
+  //   return response.json();
+  // })
+  // .then(data => {
+  //   if (data.errors) {
+  //     errorEl.textContent = "Missing Information";
+  //   }
+  //   else {
+  //     // clear form
+  //     nameEl.value = "";
+  //     amountEl.value = "";
+  //   }
+  // })
+  // .catch(err => {
+  //   // fetch failed, so save in indexed db
+  //   console.log("catch block");
+  //   saveRecord(transaction);
+
+  //   // clear form
+  //   nameEl.value = "";
+  //   amountEl.value = "";
+  // });
 }
 
 const saveRecord = (record) => {
   console.log('Save record invoked');
-  
-}
+  // Create a transaction on the BudgetStore db with readwrite access
+  const transaction = db.transaction(['BudgetStore'], 'readwrite');
+
+  // Access your BudgetStore object store
+  const store = transaction.objectStore('BudgetStore');
+
+  // Add record to your store with add method.
+  store.add(record);
+};
+
 document.querySelector("#add-btn").onclick = function() {
   sendTransaction(true);
 };
